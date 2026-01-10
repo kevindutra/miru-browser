@@ -1,0 +1,149 @@
+# Miru Browser - iOS Development Rules
+
+## Project Overview
+
+This is an iOS browser app built with Swift and SwiftUI targeting iOS 26+. It includes:
+- Main app target: `Miru Browser`
+- Share Extension target: `Share Extension`
+- Bundle identifier: `miru.Miru-Browser`
+- URL scheme: `miru://`
+
+## Building and Running in Simulator
+
+### Prerequisites
+- Xcode must be installed with iOS Simulator support
+- Command line tools: `xcodebuild`, `xcrun simctl`
+
+### Step 1: Boot the iOS Simulator
+
+```bash
+# Boot iPhone 17 Pro simulator (or another available device)
+xcrun simctl boot "iPhone 17 Pro"
+open -a Simulator
+```
+
+To list available simulators:
+```bash
+xcrun simctl list devices available
+```
+
+### Step 2: Build the App
+
+Build using xcodebuild from the project root:
+
+```bash
+cd "/Users/kevindutra/Code/Miru Browser"
+xcodebuild -scheme "Miru Browser" \
+  -configuration Debug \
+  -destination "platform=iOS Simulator,name=iPhone 17 Pro" \
+  -derivedDataPath build \
+  build
+```
+
+The built app will be at: `build/Build/Products/Debug-iphonesimulator/Miru Browser.app`
+
+### Step 3: Install and Launch
+
+```bash
+# Install the app on the booted simulator
+xcrun simctl install booted "build/Build/Products/Debug-iphonesimulator/Miru Browser.app"
+
+# Launch the app
+xcrun simctl launch booted "miru.Miru-Browser"
+```
+
+### Step 4: Test URL Scheme
+
+Open a URL in the browser:
+```bash
+xcrun simctl openurl booted "miru://open?url=https://apple.com"
+```
+
+### Taking Screenshots
+
+```bash
+xcrun simctl io booted screenshot "screenshot.png"
+```
+
+## Troubleshooting
+
+### Simulator Frozen or Unresponsive
+
+Kill and restart the simulator:
+```bash
+xcrun simctl shutdown all
+killall Simulator 2>/dev/null
+sleep 2
+xcrun simctl boot "iPhone 17 Pro"
+open -a Simulator
+```
+
+### Build Fails with Disk Space Error
+
+Clean the build directory:
+```bash
+rm -rf build/
+```
+
+Also consider cleaning Xcode's DerivedData:
+```bash
+rm -rf ~/Library/Developer/Xcode/DerivedData/Miru*
+```
+
+### Swift Type Errors with ShapeStyle
+
+When using ternary operators with SwiftUI styles like `.primary` and `.secondary.opacity()`, 
+use explicit `Color` types to avoid type mismatches:
+
+```swift
+// Bad - causes type mismatch error
+.foregroundStyle(isDisabled ? .secondary.opacity(0.4) : .primary)
+
+// Good - explicit Color types
+.foregroundStyle(isDisabled ? Color.secondary.opacity(0.4) : Color.primary)
+```
+
+## Project Structure
+
+```
+Miru Browser/
+├── Miru_BrowserApp.swift       # App entry point with URL handling
+├── ContentView.swift           # Main browser view with empty state
+├── Info.plist                  # URL scheme configuration
+├── Views/
+│   ├── WebView.swift           # WKWebView wrapper
+│   ├── NavigationBar.swift     # Bottom navigation toolbar (glass effect)
+│   ├── SettingsView.swift      # Settings sheet
+│   ├── ShareSheet.swift        # Share functionality
+│   └── SwipeToCloseModifier.swift
+├── Services/
+│   ├── AdBlocker.swift         # Content blocking manager
+│   ├── FilterListParser.swift  # EasyList format parser
+│   └── FilterUpdateService.swift # Background filter updates
+├── Models/
+│   ├── BrowserState.swift      # Observable browser state
+│   └── Settings.swift          # App settings
+└── Resources/
+    └── easylist.txt            # Bundled EasyList filter rules
+```
+
+## Key Commands Reference
+
+| Action | Command |
+|--------|---------|
+| List simulators | `xcrun simctl list devices available` |
+| Boot simulator | `xcrun simctl boot "iPhone 17 Pro"` |
+| Shutdown simulator | `xcrun simctl shutdown all` |
+| Build app | `xcodebuild -scheme "Miru Browser" -configuration Debug -destination "platform=iOS Simulator,name=iPhone 17 Pro" -derivedDataPath build build` |
+| Install app | `xcrun simctl install booted "build/Build/Products/Debug-iphonesimulator/Miru Browser.app"` |
+| Launch app | `xcrun simctl launch booted "miru.Miru-Browser"` |
+| Terminate app | `xcrun simctl terminate booted "miru.Miru-Browser"` |
+| Open URL | `xcrun simctl openurl booted "miru://open?url=https://example.com"` |
+| Screenshot | `xcrun simctl io booted screenshot "output.png"` |
+
+## Notes
+
+- Always request `["all"]` permissions when running xcodebuild or simctl commands
+- The build requires network access for some Swift package dependencies
+- iOS 26.1/26.2 simulators are available (iPhone 17 Pro, iPhone 17, iPhone Air, iPads)
+

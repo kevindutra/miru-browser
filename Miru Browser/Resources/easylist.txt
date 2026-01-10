@@ -1,0 +1,167 @@
+[Adblock Plus 2.0]
+! Title: Miru Browser Basic Ad Blocking
+! Last modified: 2024-01-01
+! Homepage: https://easylist.to/
+! This is a subset of EasyList rules optimized for mobile browsing
+
+! *** Common Ad Networks ***
+
+! Google Ads
+||googlesyndication.com^
+||googleadservices.com^
+||doubleclick.net^
+||google-analytics.com^
+||googletagmanager.com^
+||googletagservices.com^
+||pagead2.googlesyndication.com^
+||adservice.google.com^
+
+! Facebook/Meta
+||facebook.net^$third-party
+||fbcdn.net/signals^
+||connect.facebook.net^$third-party
+
+! Amazon
+||amazon-adsystem.com^
+||assoc-amazon.com^
+
+! Twitter/X
+||ads-twitter.com^
+||analytics.twitter.com^
+
+! Microsoft
+||ads.microsoft.com^
+||bat.bing.com^
+
+! Other Major Ad Networks
+||adnxs.com^
+||adsrvr.org^
+||advertising.com^
+||criteo.com^
+||criteo.net^
+||outbrain.com^
+||taboola.com^
+||pubmatic.com^
+||rubiconproject.com^
+||openx.net^
+||casalemedia.com^
+||moatads.com^
+||serving-sys.com^
+||adroll.com^
+||bidswitch.net^
+||contextweb.com^
+||smartadserver.com^
+||lijit.com^
+||quantserve.com^
+||quantcount.com^
+||scorecardresearch.com^
+||imrworldwide.com^
+||bluekai.com^
+||krxd.net^
+||exelator.com^
+||turn.com^
+||mathtag.com^
+||dotomi.com^
+||undertone.com^
+||media.net^
+||yieldmo.com^
+||sharethrough.com^
+||spotxchange.com^
+||spotx.tv^
+||33across.com^
+||tremorhub.com^
+||indexww.com^
+||rhythmone.com^
+||sovrn.com^
+||gumgum.com^
+||inmobi.com^
+||mopub.com^
+||applovin.com^
+||unity3d.com/webanalytics^
+||ironSource.mobi^
+
+! Analytics and Tracking
+||hotjar.com^
+||mixpanel.com^
+||segment.com^
+||amplitude.com^
+||heap.io^
+||fullstory.com^
+||logrocket.com^
+||crazyegg.com^
+||clicktale.net^
+||mouseflow.com^
+||luckyorange.com^
+||inspectlet.com^
+||newrelic.com^$third-party
+||sentry.io^$third-party
+||bugsnag.com^$third-party
+
+! Social Widgets (third-party only)
+||platform.twitter.com^$third-party
+||platform.linkedin.com^$third-party
+||apis.google.com/js/plusone^
+
+! Common Tracking Patterns
+/pagead/
+/ads/
+/adserver/
+/advert
+/tracking/
+/tracker/
+/pixel.gif
+/pixel.png
+/beacon/
+/_track
+/collect?
+/analytics.js
+/gtm.js
+
+! Pop-up/Pop-under Networks
+||popads.net^
+||popcash.net^
+||propellerads.com^
+||adcash.com^
+||exoclick.com^
+
+! Video Ad Networks
+||springserve.com^
+||connatix.com^
+||jwpltx.com^
+||vidazoo.com^
+
+! Mobile Specific
+||appsflyer.com^
+||adjust.com^
+||branch.io^$third-party
+||kochava.com^
+||singular.net^
+
+! Consent/Privacy Popups (optional - comment out if needed)
+||cookiebot.com^
+||onetrust.com^
+||trustarc.com^
+||cookielaw.org^
+||cookiepro.com^
+
+! Affiliate Networks
+||commission-junction.com^
+||shareasale.com^
+||linksynergy.com^
+||impact.com^$third-party
+||partnerize.com^
+
+! Additional Common Domains
+||adtechus.com^
+||yieldmanager.com^
+||yieldoptimizer.com^
+||adform.net^
+||adform.com^
+||exponential.com^
+||tribalfusion.com^
+||zedo.com^
+||specific-media.com^
+||buysellads.com^
+||carbonads.com^
+||bsa.network^
+
