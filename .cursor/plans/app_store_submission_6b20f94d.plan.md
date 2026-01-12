@@ -13,7 +13,7 @@ todos:
     status: pending
   - id: screenshots
     content: Generate App Store screenshots from simulator
-    status: pending
+    status: in_progress
   - id: app-store-connect
     content: Create app record in App Store Connect with metadata
     status: pending
@@ -171,9 +171,9 @@ Or use Xcode: **Product > Archive**, then use Organizer to upload.
 
 ## Summary Checklist
 
-- [ ] Enroll in Apple Developer Program
-- [ ] Fix Share Extension activation rule
-- [ ] Create and host Privacy Policy
+- [X] Enroll in Apple Developer Program
+- [X] Fix Share Extension activation rule
+- [X] Create and host Privacy Policy
 - [ ] Create App Store screenshots
 - [ ] Set up app record in App Store Connect
 - [ ] Write app description and metadata
