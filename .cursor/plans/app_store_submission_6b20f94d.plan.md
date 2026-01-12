@@ -13,13 +13,13 @@ todos:
     status: pending
   - id: screenshots
     content: Generate App Store screenshots from simulator
-    status: in_progress
+    status: completed
   - id: app-store-connect
     content: Create app record in App Store Connect with metadata
     status: pending
   - id: archive-upload
     content: Archive Release build and upload to App Store Connect
-    status: pending
+    status: completed
   - id: submit-review
     content: Submit app for Apple review
     status: pending
