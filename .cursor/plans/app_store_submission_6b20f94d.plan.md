@@ -1,30 +1,3 @@
----
-name: App Store Submission
-overview: Complete checklist for submitting Miru Browser to the App Store, covering Developer Program enrollment, project fixes, App Store Connect setup, and submission.
-todos:
-  - id: developer-enroll
-    content: Enroll in Apple Developer Program ($99/year)
-    status: pending
-  - id: fix-share-extension
-    content: Fix Share Extension activation rule (TRUEPREDICATE will be rejected)
-    status: completed
-  - id: privacy-policy
-    content: Create and host Privacy Policy URL
-    status: pending
-  - id: screenshots
-    content: Generate App Store screenshots from simulator
-    status: completed
-  - id: app-store-connect
-    content: Create app record in App Store Connect with metadata
-    status: pending
-  - id: archive-upload
-    content: Archive Release build and upload to App Store Connect
-    status: completed
-  - id: submit-review
-    content: Submit app for Apple review
-    status: pending
----
-
 # App Store Submission Plan for Miru Browser
 
 ## Phase 1: Apple Developer Program Enrollment

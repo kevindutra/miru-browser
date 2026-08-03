@@ -1,48 +1,3 @@
----
-name: Screen Time Parental Controls
-overview: Implement a full parental control suite using Apple's FamilyControls framework, allowing parents in the same iCloud family to configure an allowlist of permitted websites. The browser will block all navigation to sites not on the allowlist when restrictions are enabled.
-todos:
-  - id: entitlements
-    content: Add FamilyControls entitlement to Miru Browser.entitlements
-    status: pending
-  - id: parental-service
-    content: Create ParentalControlsService.swift with FamilyControls authorization
-    status: pending
-    dependencies:
-      - entitlements
-  - id: content-policy
-    content: Create ContentPolicy.swift model with allowlist storage and URL matching
-    status: pending
-    dependencies:
-      - parental-service
-  - id: webview-filtering
-    content: Modify WebView.swift to filter navigation against allowlist
-    status: pending
-    dependencies:
-      - content-policy
-  - id: blocked-view
-    content: Create BlockedSiteView.swift for displaying blocked site message
-    status: pending
-    dependencies:
-      - content-policy
-  - id: parental-ui
-    content: Create ParentalControlsView.swift with auth flow and allowlist management
-    status: pending
-    dependencies:
-      - parental-service
-      - content-policy
-  - id: settings-integration
-    content: Add Parental Controls link to SettingsView.swift
-    status: pending
-    dependencies:
-      - parental-ui
-  - id: app-integration
-    content: Initialize ParentalControlsService in Miru_BrowserApp.swift
-    status: pending
-    dependencies:
-      - parental-service
----
-
 # Screen Time Parental Controls Implementation
 
 ## Overview
@@ -80,7 +35,7 @@ flowchart TB
 
 Add the required frameworks and entitlements:
 
-**Entitlements** ([`Miru Browser/Miru Browser.entitlements`](Miru Browser/Miru Browser.entitlements)(Miru Browser/Miru Browser.entitlements)(Miru Browser/Miru Browser.entitlements)):
+**Entitlements** ([`Miru Browser/Miru Browser.entitlements`](Miru Browser/Miru Browser.entitlements)(Miru Browser/Miru Browser.entitlements)(Miru Browser/Miru Browser.entitlements)(Miru Browser/Miru Browser.entitlements)):
 
 - `com.apple.developer.family-controls` - Required for FamilyControls authorization
 
@@ -103,7 +58,7 @@ Add the required frameworks and entitlements:
 
 ### Phase 3: WebView Content Filtering
 
-**Modify** [`Miru Browser/Views/WebView.swift`](Miru Browser/Views/WebView.swift)(Miru Browser/Views/WebView.swift)(Miru Browser/Views/WebView.swift):
+**Modify** [`Miru Browser/Views/WebView.swift`](Miru Browser/Views/WebView.swift)(Miru Browser/Views/WebView.swift)(Miru Browser/Views/WebView.swift)(Miru Browser/Views/WebView.swift):
 
 - Inject `ParentalControlsService` or `ContentPolicy` 
 - In `webView(_:decidePolicyFor:decisionHandler:)`, check if URL is allowed
@@ -126,14 +81,14 @@ Add the required frameworks and entitlements:
 - "Go Back" button
 - "Request Access" button (sends notification to parent - optional)
 
-**Modify** [`Miru Browser/Views/SettingsView.swift`](Miru Browser/Views/SettingsView.swift)(Miru Browser/Views/SettingsView.swift)(Miru Browser/Views/SettingsView.swift):
+**Modify** [`Miru Browser/Views/SettingsView.swift`](Miru Browser/Views/SettingsView.swift)(Miru Browser/Views/SettingsView.swift)(Miru Browser/Views/SettingsView.swift)(Miru Browser/Views/SettingsView.swift):
 
 - Add "Parental Controls" navigation link
 - Show lock icon if restrictions are enabled
 
 ### Phase 5: App Entry Point Updates
 
-**Modify** [`Miru Browser/Miru_BrowserApp.swift`](Miru Browser/Miru_BrowserApp.swift)(Miru Browser/Miru_BrowserApp.swift)(Miru Browser/Miru_BrowserApp.swift):
+**Modify** [`Miru Browser/Miru_BrowserApp.swift`](Miru Browser/Miru_BrowserApp.swift)(Miru Browser/Miru_BrowserApp.swift)(Miru Browser/Miru_BrowserApp.swift)(Miru Browser/Miru_BrowserApp.swift):
 
 - Initialize ParentalControlsService as `@State`
 - Pass to environment for app-wide access
