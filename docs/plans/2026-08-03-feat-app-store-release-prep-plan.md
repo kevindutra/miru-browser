@@ -108,8 +108,8 @@ xcodebuild -project "Miru Browser.xcodeproj" -scheme "Miru Browser" \
 
 ### Phase 5: Commit the cleaned work
 
-- [ ] `git rm --cached "Miru Browser.xcodeproj/xcuserdata/kevindutra.xcuserdatad/xcschemes/xcschememanagement.plist"` (pattern already gitignored)
-- [ ] Commit keeper work: entitlement, icons/logo, empty-state redesign, IAP removal, schemes, this plan — logically grouped commits (e.g., `feat: restore default-browser entitlement`, `feat: redesign empty state with logo`, `chore: remove in-app purchase feature`)
+- [x] `git rm --cached "Miru Browser.xcodeproj/xcuserdata/kevindutra.xcuserdatad/xcschemes/xcschememanagement.plist"` (pattern already gitignored)
+- [x] Commit keeper work: entitlement, icons/logo, empty-state redesign, IAP removal, schemes, this plan — logically grouped commits (e.g., `feat: restore default-browser entitlement`, `feat: redesign empty state with logo`, `chore: remove in-app purchase feature`)
 
 ### Phase 6: Archive, validate entitlements, upload
 
@@ -123,10 +123,15 @@ xcodebuild -exportArchive -archivePath build/Miru.xcarchive \
   -exportOptionsPlist ExportOptions.plist -exportPath build/export
 ```
 
-- [ ] `codesign` output shows `com.apple.developer.web-browser` on the app
-- [ ] Archived .app contains **no** `StoreKitConfig.storekit` and **no** `PlugIns/Share Extension.appex`
+- [x] `codesign` output shows `com.apple.developer.web-browser` on the app (dev-signed archive verified 2026-08-03; embedded profile includes the entitlement)
+- [x] Archived .app contains **no** `StoreKitConfig.storekit` and **no** `PlugIns/Share Extension.appex`
 - [ ] If export fails with "profile doesn't include entitlement": re-check Phase 1 App ID capability, clear cached profiles (`~/Library/Developer/Xcode/UserData/Provisioning Profiles`), let Xcode re-fetch
 - [ ] Upload succeeds (needs live Xcode ASC session or an API key via `-authenticationKeyPath`)
+
+**Status 2026-08-03:** Archive succeeds; local `-exportArchive` (destination: export) fails with three account-side blockers, all matching Phase 1 predictions — resolve in this order, then re-run the export:
+1. **"PLA Update available"** — accept the updated Program License Agreement at developer.apple.com / App Store Connect (blocks all profile generation and uploads)
+2. **No "iOS Distribution" signing certificate** — expired; sign into Xcode → Settings → Accounts → Manage Certificates → create Apple Distribution (or via the portal)
+3. **Store provisioning profile lacks the Default Web Browser capability** — regenerate after 1–2 (dev profile already includes it, so the App ID grant is in place)
 
 ### Phase 7: ASC metadata + submit
 
