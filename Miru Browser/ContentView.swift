@@ -245,12 +245,9 @@ struct EmptyStateView: View {
   var body: some View {
     GeometryReader { geometry in
       ZStack {
-        // Photo background - constrained to screen bounds
-        Image("Background")
-          .resizable()
-          .aspectRatio(contentMode: .fill)
+        // Night sky background (matches mirubrowser.com) - constrained to screen bounds
+        NightSkyView()
           .frame(width: geometry.size.width, height: geometry.size.height)
-          .clipped()
 
         // Centered Logo
         Image("Logo")
@@ -303,6 +300,8 @@ struct EmptyStateView: View {
       }
     }
     .ignoresSafeArea()
+    // Light status bar over the dark sky
+    .preferredColorScheme(.dark)
     .sheet(isPresented: $showSettings) {
       SettingsView(settings: settings)
     }
