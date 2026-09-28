@@ -77,132 +77,143 @@ struct FilterListParser {
         return rules
     }
     
-    /// Parse a single blocking rule
+    /// Resource-type options WebKit can express, mapped to its `resource-type` values
+    private static let resourceTypeOptions: [String: String] = [
+        "script": "script",
+        "image": "image",
+        "stylesheet": "style-sheet",
+        "xmlhttprequest": "fetch",
+        "subdocument": "document",
+        "font": "font",
+        "media": "media",
+        "ping": "ping",
+        "websocket": "websocket",
+        "other": "raw",
+    ]
+
+    /// Parse a single blocking rule. Returns nil for rules WebKit can't express faithfully —
+    /// dropping an option would broaden the rule, and one invalid rule fails the whole list.
     private static func parseBlockingRule(_ line: String) -> WebKitRule? {
+        // WebKit only accepts ASCII url-filters
+        guard line.allSatisfy(\.isASCII) else { return nil }
+
         var pattern = line
-        var domains: [String]?
-        var resourceTypes: [String]?
+        var includeDomains: [String] = []
+        var excludeDomains: [String] = []
+        var resourceTypes: [String] = []
         var thirdParty: Bool?
-        
+        var caseSensitive = false
+
         // Parse options after $
         if let dollarIndex = pattern.lastIndex(of: "$") {
             let optionsString = String(pattern[pattern.index(after: dollarIndex)...])
             pattern = String(pattern[..<dollarIndex])
-            
-            let options = optionsString.components(separatedBy: ",")
-            for option in options {
-                let opt = option.trimmingCharacters(in: .whitespaces)
-                
-                if opt == "third-party" {
+
+            for option in optionsString.components(separatedBy: ",") {
+                let opt = option.trimmingCharacters(in: .whitespaces).lowercased()
+
+                if opt == "third-party" || opt == "3p" {
                     thirdParty = true
-                } else if opt == "~third-party" {
+                } else if opt == "~third-party" || opt == "1p" {
                     thirdParty = false
+                } else if opt == "match-case" {
+                    caseSensitive = true
                 } else if opt.hasPrefix("domain=") {
-                    let domainStr = String(opt.dropFirst(7))
-                    domains = domainStr.components(separatedBy: "|").map { d in
-                        d.hasPrefix("~") ? d : "*\(d)"
+                    for domain in opt.dropFirst(7).components(separatedBy: "|") where !domain.isEmpty {
+                        if domain.hasPrefix("~") {
+                            excludeDomains.append("*" + domain.dropFirst())
+                        } else {
+                            includeDomains.append("*" + domain)
+                        }
                     }
-                } else if opt == "script" {
-                    resourceTypes = ["script"]
-                } else if opt == "image" {
-                    resourceTypes = ["image"]
-                } else if opt == "stylesheet" {
-                    resourceTypes = ["style-sheet"]
-                } else if opt == "xmlhttprequest" {
-                    resourceTypes = ["fetch"]
-                } else if opt == "subdocument" {
-                    resourceTypes = ["document"]
+                } else if let type = resourceTypeOptions[opt] {
+                    resourceTypes.append(type)
+                } else {
+                    // Unsupported option ($popup, $csp, $redirect, ~script, ...)
+                    return nil
                 }
             }
         }
-        
-        // Convert pattern to regex
+
         guard let urlFilter = convertToRegex(pattern) else {
             return nil
         }
-        
+
         var trigger = WebKitRule.Trigger(urlFilter: urlFilter)
-        
-        if let types = resourceTypes {
-            trigger.resourceType = types
+        if caseSensitive {
+            trigger.urlFilterIsCaseSensitive = true
         }
-        
+        if !resourceTypes.isEmpty {
+            trigger.resourceType = resourceTypes
+        }
         if thirdParty == true {
             trigger.loadType = ["third-party"]
         } else if thirdParty == false {
             trigger.loadType = ["first-party"]
         }
-        
-        if let doms = domains {
-            let includeDomains = doms.filter { !$0.hasPrefix("~") }
-            let excludeDomains = doms.filter { $0.hasPrefix("~") }.map { String($0.dropFirst()) }
-            
-            if !includeDomains.isEmpty {
-                trigger.ifDomain = includeDomains
-            }
-            if !excludeDomains.isEmpty {
-                trigger.unlessDomain = excludeDomains
-            }
+
+        // WebKit forbids if-domain and unless-domain on the same trigger; the
+        // include list is the narrower of the two, so keep it
+        if !includeDomains.isEmpty {
+            trigger.ifDomain = includeDomains
+        } else if !excludeDomains.isEmpty {
+            trigger.unlessDomain = excludeDomains
         }
-        
-        let action = WebKitRule.Action(type: "block")
-        
-        return WebKitRule(trigger: trigger, action: action)
+
+        return WebKitRule(trigger: trigger, action: WebKitRule.Action(type: "block"))
     }
-    
-    /// Convert EasyList pattern to WebKit regex
+
+    /// Convert an EasyList pattern to a WebKit url-filter. WebKit's regex subset has
+    /// no alternation (`|`), so every construct here maps to single-branch syntax.
     private static func convertToRegex(_ pattern: String) -> String? {
-        var regex = pattern
-        
-        // Handle domain anchor ||
-        if regex.hasPrefix("||") {
-            regex = String(regex.dropFirst(2))
-            regex = "^https?://([^/]+\\.)?" + escapeRegex(regex)
-        }
-        // Handle start anchor |
-        else if regex.hasPrefix("|") {
-            regex = String(regex.dropFirst())
-            regex = "^" + escapeRegex(regex)
-        }
-        // Handle end anchor |
-        else if regex.hasSuffix("|") {
-            regex = String(regex.dropLast())
-            regex = escapeRegex(regex) + "$"
-        }
-        else {
-            regex = escapeRegex(regex)
-        }
-        
-        // Replace separator ^ with regex pattern
-        regex = regex.replacingOccurrences(of: "\\^", with: "([/?#]|$)")
-        
-        // Replace wildcard * with regex pattern
-        regex = regex.replacingOccurrences(of: "\\*", with: ".*")
-        
-        // Basic validation
-        if regex.isEmpty {
+        var body = pattern
+
+        // Raw /regex/ rules usually rely on syntax WebKit doesn't support
+        if body.count > 1, body.hasPrefix("/"), body.hasSuffix("/") {
             return nil
         }
-        
-        return regex
-    }
-    
-    /// Escape special regex characters
-    private static func escapeRegex(_ string: String) -> String {
-        let specialChars = ["\\", ".", "+", "?", "[", "]", "{", "}", "(", ")", "^", "$", "|"]
-        var result = string
-        
-        for char in specialChars {
-            result = result.replacingOccurrences(of: char, with: "\\\(char)")
+
+        var prefix = ""
+        var suffix = ""
+        if body.hasPrefix("||") {
+            // Domain anchor: the host or any subdomain of it
+            body.removeFirst(2)
+            prefix = "^[^:]+://+([^:/]+\\.)?"
+        } else if body.hasPrefix("|") {
+            body.removeFirst()
+            prefix = "^"
         }
-        
-        // Keep * and ^ as they have special meaning in EasyList
-        result = result.replacingOccurrences(of: "\\\\\\*", with: "\\*")
-        result = result.replacingOccurrences(of: "\\\\\\^", with: "\\^")
-        
-        return result
+        if body.hasSuffix("|") {
+            body.removeLast()
+            suffix = "$"
+        }
+
+        // A remaining | would need alternation
+        guard !body.contains("|") else { return nil }
+
+        // Drop wildcards at the edges — url-filter already matches anywhere
+        while body.hasPrefix("*") && prefix.isEmpty { body.removeFirst() }
+        while body.hasSuffix("*") && suffix.isEmpty { body.removeLast() }
+        guard !body.isEmpty || !prefix.isEmpty else { return nil }
+
+        var regex = prefix
+        for character in body {
+            switch character {
+            case "*":
+                regex += ".*"
+            case "^":
+                // Separator: any non-URL-token character. WebKit normalizes URLs, so a
+                // bare host always ends in "/" and this still matches "||example.com^"
+                regex += "[/:?=&]"
+            case ".", "+", "?", "(", ")", "[", "]", "{", "}", "\\", "$":
+                regex += "\\" + String(character)
+            default:
+                regex += String(character)
+            }
+        }
+        return regex + suffix
     }
-    
+
     /// Convert rules to JSON string for WebKit
     static func rulesToJSON(_ rules: [WebKitRule]) -> String? {
         let encoder = JSONEncoder()

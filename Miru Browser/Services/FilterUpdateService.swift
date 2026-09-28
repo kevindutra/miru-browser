@@ -61,24 +61,11 @@ actor FilterUpdateService {
         }
     }
     
-    /// Get the path to the most recent EasyList (downloaded or bundled)
-    func getEasyListContent() -> String? {
-        // First try downloaded version
+    /// The most recently downloaded EasyList, if one has been downloaded
+    func downloadedEasyListContent() -> String? {
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let downloadedURL = documentsURL.appendingPathComponent("easylist.txt")
-        
-        if FileManager.default.fileExists(atPath: downloadedURL.path),
-           let content = try? String(contentsOf: downloadedURL, encoding: .utf8) {
-            return content
-        }
-        
-        // Fall back to bundled version
-        if let bundledURL = Bundle.main.url(forResource: "easylist", withExtension: "txt"),
-           let content = try? String(contentsOf: bundledURL, encoding: .utf8) {
-            return content
-        }
-        
-        return nil
+        return try? String(contentsOf: downloadedURL, encoding: .utf8)
     }
     
     /// Get the date of the last successful update
