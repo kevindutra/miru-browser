@@ -17,9 +17,10 @@ struct SwipeToCloseContainer<Content: View>: View {
   @State private var dragOffset: CGFloat = 0
   @State private var isClosing: Bool = false
   @State private var hasReachedThreshold: Bool = false
+  @State private var containerWidth: CGFloat = 0
   
   // Constants
-  private let closeThreshold: CGFloat = UIScreen.main.bounds.width * 0.4
+  private var closeThreshold: CGFloat { max(containerWidth * 0.4, 1) }
   private let maxRotation: Double = -8
   
   // Computed properties
@@ -72,6 +73,8 @@ struct SwipeToCloseContainer<Content: View>: View {
           .scaleEffect(scale, anchor: .trailing)
           .opacity(contentOpacity)
       }
+      .onAppear { containerWidth = geometry.size.width }
+      .onChange(of: geometry.size.width) { _, newWidth in containerWidth = newWidth }
       .contentShape(Rectangle())
       .highPriorityGesture(
         DragGesture(minimumDistance: 30, coordinateSpace: .local)

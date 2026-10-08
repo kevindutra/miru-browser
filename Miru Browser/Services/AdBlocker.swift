@@ -34,25 +34,26 @@ final class AdBlocker: ObservableObject {
             return
         }
         
-        // Load and parse EasyList
-        guard let easyListContent = loadBundledEasyList() else {
-            print("Failed to load EasyList from bundle")
-            // Fall back to basic rules
-            await compileBasicRules()
-            return
+        // Prefer the weekly download, then the bundled copy, then basic rules —
+        // WebKit rejects the whole list if any rule fails to compile
+        var sources: [String] = []
+        if let downloaded = await FilterUpdateService().downloadedEasyListContent() {
+            sources.append(downloaded)
         }
-        
-        // Parse and compile rules
-        let rules = FilterListParser.parseEasyList(easyListContent)
-        self.rulesCount = rules.count
-        
-        guard let jsonRules = FilterListParser.rulesToJSON(rules) else {
-            print("Failed to convert rules to JSON")
-            await compileBasicRules()
-            return
+        if let bundled = loadBundledEasyList() {
+            sources.append(bundled)
         }
-        
-        await compileRules(jsonRules)
+
+        for source in sources {
+            let rules = FilterListParser.parseEasyList(source)
+            guard let jsonRules = FilterListParser.rulesToJSON(rules) else { continue }
+            if await compileRules(jsonRules) {
+                self.rulesCount = rules.count
+                return
+            }
+        }
+
+        await compileBasicRules()
     }
     
     /// Check for cached compiled rules
@@ -64,20 +65,21 @@ final class AdBlocker: ObservableObject {
         }
     }
     
-    /// Compile rules from JSON string
-    private func compileRules(_ jsonRules: String) async {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+    /// Compile rules from JSON string, returning whether compilation succeeded
+    private func compileRules(_ jsonRules: String) async -> Bool {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             WKContentRuleListStore.default().compileContentRuleList(
                 forIdentifier: ruleListIdentifier,
                 encodedContentRuleList: jsonRules
             ) { [weak self] ruleList, error in
                 if let error = error {
                     print("Failed to compile content rules: \(error)")
+                    continuation.resume(returning: false)
                 } else {
                     self?.contentRuleList = ruleList
                     self?.isLoaded = true
+                    continuation.resume(returning: true)
                 }
-                continuation.resume()
             }
         }
     }
@@ -96,8 +98,7 @@ final class AdBlocker: ObservableObject {
         [
             {
                 "trigger": {
-                    "url-filter": ".*",
-                    "if-domain": ["*doubleclick.net", "*googlesyndication.com", "*googleadservices.com", "*google-analytics.com", "*googletagmanager.com", "*facebook.net", "*fbcdn.net", "*amazon-adsystem.com", "*advertising.com", "*adnxs.com", "*adsrvr.org", "*criteo.com", "*outbrain.com", "*taboola.com", "*scorecardresearch.com", "*quantserve.com", "*pubmatic.com", "*rubiconproject.com", "*openx.net", "*casalemedia.com", "*moatads.com", "*serving-sys.com", "*adroll.com", "*bidswitch.net", "*contextweb.com"]
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?doubleclick\\\\.net[/:?=&]"
                 },
                 "action": {
                     "type": "block"
@@ -105,7 +106,7 @@ final class AdBlocker: ObservableObject {
             },
             {
                 "trigger": {
-                    "url-filter": "^https?://.*(/ads/|/ad/|/advertisement|/banner|/popup|/tracking|/analytics|/pixel)"
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?googlesyndication\\\\.com[/:?=&]"
                 },
                 "action": {
                     "type": "block"
@@ -113,8 +114,247 @@ final class AdBlocker: ObservableObject {
             },
             {
                 "trigger": {
-                    "url-filter": "^https?://.*\\.(gif|png|jpg|jpeg)\\?.*tracking",
-                    "resource-type": ["image"]
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?googleadservices\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?google-analytics\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?googletagmanager\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?facebook\\\\.net[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?fbcdn\\\\.net[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?amazon-adsystem\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?advertising\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?adnxs\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?adsrvr\\\\.org[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?criteo\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?outbrain\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?taboola\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?scorecardresearch\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?quantserve\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?pubmatic\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?rubiconproject\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?openx\\\\.net[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?casalemedia\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?moatads\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?serving-sys\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?adroll\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?bidswitch\\\\.net[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^[^:]+://+([^:/]+\\\\.)?contextweb\\\\.com[/:?=&]"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^https?://.*/ads/"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^https?://.*/ad/"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^https?://.*/advertisement"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^https?://.*/banner"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^https?://.*/popup"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^https?://.*/tracking"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^https?://.*/analytics"
+                },
+                "action": {
+                    "type": "block"
+                }
+            },
+            {
+                "trigger": {
+                    "url-filter": "^https?://.*/pixel"
                 },
                 "action": {
                     "type": "block"
@@ -123,8 +363,8 @@ final class AdBlocker: ObservableObject {
         ]
         """
         
-        self.rulesCount = 3
-        await compileRules(basicRules)
+        self.rulesCount = 33
+        _ = await compileRules(basicRules)
     }
     
     /// Apply rules to WebView configuration

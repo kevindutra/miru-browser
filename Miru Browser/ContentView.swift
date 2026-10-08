@@ -245,59 +245,59 @@ struct EmptyStateView: View {
   var body: some View {
     GeometryReader { geometry in
       ZStack {
-        // Photo background - constrained to screen bounds
-        Image("Background")
-          .resizable()
-          .aspectRatio(contentMode: .fill)
+        // Night sky background (matches mirubrowser.com) - constrained to screen bounds
+        NightSkyView()
           .frame(width: geometry.size.width, height: geometry.size.height)
-          .clipped()
 
-        // Content
+        // Centered Logo
+        Image("Logo")
+          .resizable()
+          .aspectRatio(contentMode: .fit)
+          .frame(width: 120, height: 120)
+
+        // Bottom toolbar with buttons at corners
         VStack {
           Spacer()
-
-          // Default site button (when enabled)
-          if settings.showDefaultSiteButton {
+          HStack {
+            // Bookmark button (bottom left)
             Button {
-              if let url = URL(string: settings.defaultSiteURL) {
-                browserState.loadURL(url)
-              }
+              browserState.loadURL(settings.bookmarkURL)
             } label: {
               Image(systemName: "globe")
-                .font(.system(size: 48, weight: .light))
+                .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(.white.opacity(0.9))
-                .frame(width: 80, height: 80)
-                .background(.ultraThinMaterial.opacity(0.3))
+                .frame(width: 44, height: 44)
+                .background(.ultraThinMaterial.opacity(0.5))
                 .clipShape(Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Open default site")
-            .accessibilityHint("Opens \(settings.defaultSiteURL)")
-          }
+            .accessibilityLabel("Open bookmark")
+            .accessibilityHint("Opens \(settings.bookmarkURL.absoluteString)")
 
-          Spacer()
-        }
+            Spacer()
 
-        // Settings gear at bottom center
-        VStack {
-          Spacer()
-          Button {
-            showSettings = true
-          } label: {
-            Image(systemName: "gearshape")
-              .font(.system(size: 20, weight: .medium))
-              .foregroundStyle(.white.opacity(0.9))
-              .frame(width: 44, height: 44)
-              .background(.ultraThinMaterial.opacity(0.5))
-              .clipShape(Circle())
+            // Settings gear (bottom right)
+            Button {
+              showSettings = true
+            } label: {
+              Image(systemName: "gearshape")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 44, height: 44)
+                .background(.ultraThinMaterial.opacity(0.5))
+                .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Settings")
           }
-          .buttonStyle(.plain)
-          .accessibilityLabel("Settings")
+          .padding(.horizontal, 24)
           .padding(.bottom, 32)
         }
       }
     }
     .ignoresSafeArea()
+    // Light status bar over the dark sky
+    .preferredColorScheme(.dark)
     .sheet(isPresented: $showSettings) {
       SettingsView(settings: settings)
     }

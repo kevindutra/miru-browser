@@ -10,19 +10,12 @@ import SwiftUI
 struct NavigationBar: View {
   @Environment(BrowserState.self) private var browserState
   @Environment(AppSettings.self) private var settings
-  @State private var showShareSheet = false
   @State private var showSettings = false
 
   var isVertical: Bool = false
 
   var body: some View {
     glassPanel
-      .sheet(isPresented: $showShareSheet) {
-        if let url = browserState.currentURL {
-          ShareSheet(items: shareItems(url: url))
-            .presentationDetents([.medium, .large])
-        }
-      }
       .sheet(isPresented: $showSettings) {
         SettingsView(settings: settings)
       }
@@ -80,10 +73,10 @@ struct NavigationBar: View {
 
   private var floatingMenuButton: some View {
     Menu {
-      Button {
-        showShareSheet = true
-      } label: {
-        Label("Share", systemImage: "square.and.arrow.up")
+      if let url = browserState.currentURL {
+        ShareLink(item: url, preview: SharePreview(sharePreviewTitle(url: url))) {
+          Label("Share", systemImage: "square.and.arrow.up")
+        }
       }
 
       Button {
@@ -116,12 +109,8 @@ struct NavigationBar: View {
     .accessibilityHint("Open menu with share, settings, and close options")
   }
 
-  private func shareItems(url: URL) -> [Any] {
-    var items: [Any] = [url]
-    if !browserState.pageTitle.isEmpty {
-      items.insert(browserState.pageTitle, at: 0)
-    }
-    return items
+  private func sharePreviewTitle(url: URL) -> String {
+    browserState.pageTitle.isEmpty ? (url.host() ?? url.absoluteString) : browserState.pageTitle
   }
 }
 
