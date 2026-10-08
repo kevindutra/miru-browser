@@ -1,0 +1,67 @@
+# Xcode Build Artifacts
+build/
+DerivedData/
+*.build/
+
+# Xcode User Data
+xcuserdata/
+*.xcuserstate
+*.xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Xcode Project Settings (user-specific)
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# CocoaPods (if used)
+Pods/
+
+# Carthage (if used)
+Carthage/Build/
+Carthage/Checkouts/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Archives
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Screenshots (build artifacts)
+screenshot*.png
+simulator*.png
+
+# Marketing build scratch output
+marketing/build/
+marketing/__pycache__/
+__pycache__/
+*.pyc
+
+# Secrets and signing material (never commit)
+.env
+.env.*
+.dev.vars
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+
+# Editor / AI scratch notes
+.cursor/
