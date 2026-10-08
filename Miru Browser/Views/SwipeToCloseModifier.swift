@@ -75,38 +75,25 @@ struct SwipeToCloseContainer<Content: View>: View {
       }
       .onAppear { containerWidth = geometry.size.width }
       .onChange(of: geometry.size.width) { _, newWidth in containerWidth = newWidth }
-      .contentShape(Rectangle())
-      .highPriorityGesture(
-        DragGesture(minimumDistance: 30, coordinateSpace: .local)
-          .onChanged { value in
-            // Detect if this is primarily a horizontal gesture
-            let horizontalDistance = abs(value.translation.width)
-            let verticalDistance = abs(value.translation.height)
-            
-            // Only activate for horizontal-dominant left swipes
-            guard horizontalDistance > verticalDistance * 1.5,
-                  value.translation.width < 0,
-                  !isClosing else { return }
-            
-            // Apply resistance as we approach threshold
-            let rawOffset = value.translation.width
-            let resistanceFactor: CGFloat = 0.8
-            dragOffset = rawOffset * resistanceFactor
-            
-            // Track if threshold has been reached (haptic feedback once)
+      .gesture(
+        // Starts only from the right screen edge, so horizontal swipes on the
+        // page itself (carousels, slideshows, maps) stay with the page.
+        RightEdgeSwipeGesture(
+          onChanged: { translation in
+            guard !isClosing else { return }
+            dragOffset = min(translation, 0) * 0.8
+
+            // Haptic once when crossing the threshold
             if abs(dragOffset) >= closeThreshold && !hasReachedThreshold {
               hasReachedThreshold = true
-              let generator = UIImpactFeedbackGenerator(style: .medium)
-              generator.impactOccurred()
+              UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             } else if abs(dragOffset) < closeThreshold {
               hasReachedThreshold = false
             }
-          }
-          .onEnded { value in
+          },
+          onEnded: { cancelled in
             guard !isClosing else { return }
-            
-            // Close if threshold was reached, otherwise spring back
-            if hasReachedThreshold {
+            if hasReachedThreshold && !cancelled {
               triggerClose(screenWidth: geometry.size.width)
             } else {
               withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
@@ -115,10 +102,11 @@ struct SwipeToCloseContainer<Content: View>: View {
             }
             hasReachedThreshold = false
           }
+        )
       )
     }
   }
-  
+
   private func triggerClose(screenWidth: CGFloat) {
     isClosing = true
     
@@ -134,6 +122,51 @@ struct SwipeToCloseContainer<Content: View>: View {
       // Reset state
       dragOffset = 0
       isClosing = false
+    }
+  }
+}
+
+// MARK: - Right Edge Swipe Gesture
+
+/// A swipe that must begin at the right edge of the screen, reported as the
+/// horizontal translation (negative when moving left).
+private struct RightEdgeSwipeGesture: UIGestureRecognizerRepresentable {
+  let onChanged: (CGFloat) -> Void
+  let onEnded: (_ cancelled: Bool) -> Void
+
+  func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+    Coordinator()
+  }
+
+  func makeUIGestureRecognizer(context: Context) -> UIScreenEdgePanGestureRecognizer {
+    let recognizer = UIScreenEdgePanGestureRecognizer()
+    recognizer.edges = .right
+    recognizer.delegate = context.coordinator
+    return recognizer
+  }
+
+  func handleUIGestureRecognizerAction(
+    _ recognizer: UIScreenEdgePanGestureRecognizer, context: Context
+  ) {
+    switch recognizer.state {
+    case .began, .changed:
+      onChanged(recognizer.translation(in: recognizer.view).x)
+    case .ended:
+      onEnded(false)
+    case .cancelled, .failed:
+      onEnded(true)
+    default:
+      break
+    }
+  }
+
+  final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    // Win over WebKit's own edge swipe (forward navigation) from the same edge.
+    func gestureRecognizer(
+      _ gestureRecognizer: UIGestureRecognizer,
+      shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+      otherGestureRecognizer is UIScreenEdgePanGestureRecognizer
     }
   }
 }
