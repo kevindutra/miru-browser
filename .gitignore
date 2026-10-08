@@ -46,3 +46,7 @@ playground.xcworkspace
 # Screenshots (build artifacts)
 screenshot*.png
 simulator*.png
+
+# Marketing build scratch output
+marketing/build/
+marketing/__pycache__/
