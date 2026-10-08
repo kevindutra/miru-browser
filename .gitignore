@@ -4,6 +4,7 @@ DerivedData/
 *.build/
 
 # Xcode User Data
+xcuserdata/
 *.xcuserstate
 *.xcuserdata/
 *.xcworkspace/xcuserdata/
@@ -50,3 +51,17 @@ simulator*.png
 # Marketing build scratch output
 marketing/build/
 marketing/__pycache__/
+__pycache__/
+*.pyc
+
+# Secrets and signing material (never commit)
+.env
+.env.*
+.dev.vars
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+
+# Editor / AI scratch notes
+.cursor/
