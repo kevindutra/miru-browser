@@ -9,23 +9,26 @@ import SwiftUI
 
 @Observable
 final class AppSettings {
-  private static let defaultSiteURLKey = "defaultSiteURL"
-  private static let showDefaultSiteButtonKey = "showDefaultSiteButton"
-  
-  var defaultSiteURL: String {
-    didSet {
-      UserDefaults.standard.set(defaultSiteURL, forKey: Self.defaultSiteURLKey)
-    }
-  }
-  
-  var showDefaultSiteButton: Bool {
-    didSet {
-      UserDefaults.standard.set(showDefaultSiteButton, forKey: Self.showDefaultSiteButtonKey)
-    }
-  }
-  
+  private static let bookmarkURLKey = "bookmarkURL"
+
+  static let defaultBookmarkURL = URL(string: "https://en.wikipedia.org")!
+
+  /// The bookmark the person chose. Set exactly once; there is deliberately
+  /// no way to change or clear it short of reinstalling the app.
+  private(set) var lockedBookmarkURL: URL?
+
+  /// What the home screen globe opens: the chosen bookmark, or Wikipedia
+  /// until one is chosen.
+  var bookmarkURL: URL { lockedBookmarkURL ?? Self.defaultBookmarkURL }
+
   init() {
-    self.defaultSiteURL = UserDefaults.standard.string(forKey: Self.defaultSiteURLKey) ?? "https://en.wikipedia.org"
-    self.showDefaultSiteButton = UserDefaults.standard.object(forKey: Self.showDefaultSiteButtonKey) as? Bool ?? true
+    self.lockedBookmarkURL = UserDefaults.standard.url(forKey: Self.bookmarkURLKey)
+  }
+
+  /// Locks in the bookmark. Ignored if one is already set.
+  func setBookmark(_ url: URL) {
+    guard lockedBookmarkURL == nil else { return }
+    lockedBookmarkURL = url
+    UserDefaults.standard.set(url, forKey: Self.bookmarkURLKey)
   }
 }

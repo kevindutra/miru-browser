@@ -5,7 +5,7 @@ way — no tabs, no accounts, no data collected.
 
 - Opens any http/https link as your default browser
 - Built-in ad blocking (EasyList, updated in the background)
-- A single configurable bookmark on the home screen
+- A single bookmark on the home screen — chosen once, then set for good
 - SwiftUI + WKWebView, iPhone and iPad
 
 ## Building

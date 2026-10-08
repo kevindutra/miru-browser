@@ -259,24 +259,20 @@ struct EmptyStateView: View {
         VStack {
           Spacer()
           HStack {
-            // Default site button (bottom left)
-            if settings.showDefaultSiteButton {
-              Button {
-                if let url = URL(string: settings.defaultSiteURL) {
-                  browserState.loadURL(url)
-                }
-              } label: {
-                Image(systemName: "globe")
-                  .font(.system(size: 20, weight: .medium))
-                  .foregroundStyle(.white.opacity(0.9))
-                  .frame(width: 44, height: 44)
-                  .background(.ultraThinMaterial.opacity(0.5))
-                  .clipShape(Circle())
-              }
-              .buttonStyle(.plain)
-              .accessibilityLabel("Open default site")
-              .accessibilityHint("Opens \(settings.defaultSiteURL)")
+            // Bookmark button (bottom left)
+            Button {
+              browserState.loadURL(settings.bookmarkURL)
+            } label: {
+              Image(systemName: "globe")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 44, height: 44)
+                .background(.ultraThinMaterial.opacity(0.5))
+                .clipShape(Circle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open bookmark")
+            .accessibilityHint("Opens \(settings.bookmarkURL.absoluteString)")
 
             Spacer()
 
