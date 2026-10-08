@@ -35,9 +35,11 @@ struct WebView: UIViewRepresentable {
     // Theme color fill in ContentView creates the full-screen appearance
     webView.scrollView.contentInsetAdjustmentBehavior = .scrollableAxes
 
-    // Add pull-to-refresh with custom release behavior
+    // Pull-to-refresh: the control reports the pull, the reload waits for release
     let refreshControl = UIRefreshControl()
     refreshControl.tintColor = .systemBlue
+    refreshControl.addTarget(
+      context.coordinator, action: #selector(Coordinator.refreshPulled), for: .valueChanged)
     webView.scrollView.refreshControl = refreshControl
     webView.scrollView.delegate = context.coordinator
     context.coordinator.refreshControl = refreshControl
@@ -78,10 +80,8 @@ struct WebView: UIViewRepresentable {
     private var canGoBackObservation: NSKeyValueObservation?
     private var canGoForwardObservation: NSKeyValueObservation?
 
-    // Track if user has pulled far enough to trigger refresh
-    private var shouldRefreshOnRelease = false
-    private var isShowingFullAnimation = false
-    private let refreshThreshold: CGFloat = 80
+    // Set when the refresh control fires; the reload happens on release
+    private var reloadOnRelease = false
 
     // Track scroll direction for nav bar auto-hide
     private var lastContentOffset: CGFloat = 0
@@ -100,22 +100,6 @@ struct WebView: UIViewRepresentable {
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-      // Check if user has pulled down past the threshold
-      let pullDistance = -scrollView.contentOffset.y - scrollView.adjustedContentInset.top
-      let pastThreshold = pullDistance > refreshThreshold
-
-      // Show full animation once past threshold
-      if pastThreshold && !isShowingFullAnimation {
-        isShowingFullAnimation = true
-        refreshControl?.beginRefreshing()
-      } else if !pastThreshold && isShowingFullAnimation && scrollView.isDragging {
-        // Reset if user drags back up above threshold
-        isShowingFullAnimation = false
-        refreshControl?.endRefreshing()
-      }
-
-      shouldRefreshOnRelease = pastThreshold
-
       // Track scroll direction for nav bar auto-hide
       // Only apply hide/show logic after user has started actively scrolling
       guard hasUserStartedScrolling else { return }
@@ -148,25 +132,27 @@ struct WebView: UIViewRepresentable {
       lastContentOffset = currentOffset
     }
 
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-      // Only trigger refresh on release if pulled far enough
-      if shouldRefreshOnRelease {
-        // Ensure refresh control is in refreshing state
-        if !refreshControl!.isRefreshing {
-          refreshControl?.beginRefreshing()
-        }
-        webView?.reload()
-
-        // End refreshing after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-          self?.refreshControl?.endRefreshing()
-          self?.isShowingFullAnimation = false
-        }
-      } else {
-        // User released without pulling far enough
-        isShowingFullAnimation = false
+    @objc func refreshPulled() {
+      reloadOnRelease = true
+      // If the control fired after the finger already lifted, reload now
+      if webView?.scrollView.isDragging == false {
+        reloadAfterPull()
       }
-      shouldRefreshOnRelease = false
+    }
+
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+      reloadAfterPull()
+    }
+
+    private func reloadAfterPull() {
+      guard reloadOnRelease else { return }
+      reloadOnRelease = false
+      webView?.reload()
+
+      // Safety net in case the reload never reports finishing
+      DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+        self?.refreshControl?.endRefreshing()
+      }
     }
 
     func observeWebView(_ webView: WKWebView) {
@@ -223,7 +209,19 @@ struct WebView: UIViewRepresentable {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+      refreshControl?.endRefreshing()
       extractThemeColor(from: webView)
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+      refreshControl?.endRefreshing()
+    }
+
+    func webView(
+      _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!,
+      withError error: Error
+    ) {
+      refreshControl?.endRefreshing()
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
