@@ -16,6 +16,9 @@ way — no tabs, no accounts, no data collected.
   background.
 - **Saves nothing.** Pages load in a non-persistent `WKWebView` data store, so
   no history, cookies, or site data survive the session.
+- **Optionally stays signed in.** Turn on *Stay Signed In* in Settings to keep
+  cookies and site data on the device so you stay logged in to sites. Turning
+  it off erases them.
 - **Simple gestures.** Pull down to refresh; swipe in from the right edge to
   close the page.
 - SwiftUI + WKWebView, iPhone and iPad.

@@ -30,6 +30,7 @@ struct SettingsView: View {
         } else {
           pickerSection
         }
+        staySignedInSection
       }
       .navigationTitle("Settings")
       .navigationBarTitleDisplayMode(.inline)
@@ -70,6 +71,20 @@ struct SettingsView: View {
       Text("Bookmark")
     } footer: {
       Text("Your bookmark is set for good. Tap the globe on the home screen to open it.")
+    }
+  }
+
+  private var staySignedInSection: some View {
+    Section {
+      Toggle("Stay Signed In", isOn: $settings.staySignedIn)
+    } header: {
+      Text("Privacy")
+    } footer: {
+      Text(
+        settings.staySignedIn
+          ? "Cookies and site data are kept on this device, so you stay logged in to sites. Turn this off to erase them."
+          : "Miru forgets cookies and site data when you close a page. Turn this on to stay logged in to sites."
+      )
     }
   }
 

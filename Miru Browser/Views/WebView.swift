@@ -10,6 +10,7 @@ import WebKit
 
 struct WebView: UIViewRepresentable {
   @Environment(BrowserState.self) private var browserState
+  @Environment(AppSettings.self) private var settings
   let adBlocker: AdBlocker
 
   func makeCoordinator() -> Coordinator {
@@ -18,7 +19,9 @@ struct WebView: UIViewRepresentable {
 
   func makeUIView(context: Context) -> WKWebView {
     let configuration = WKWebViewConfiguration()
-    configuration.websiteDataStore = .nonPersistent()
+    // Ephemeral by default; with "Stay Signed In" on, cookies and site data
+    // persist so logins survive between pages and launches
+    configuration.websiteDataStore = settings.staySignedIn ? .default() : .nonPersistent()
 
     // Identify as Safari. Without the Safari token some sites (x.com) treat
     // Miru as an in-app webview and redirect to an x-safari-https:// link
