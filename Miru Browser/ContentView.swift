@@ -25,12 +25,9 @@ struct ContentView: View {
         .ignoresSafeArea()
 
       if browserState.currentURL != nil {
-        // Browser view with swipe-to-close
-        if isLandscape {
-          landscapeBrowserView
-        } else {
-          portraitBrowserView
-        }
+        // One browser view for both orientations so rotating keeps the same
+        // WKWebView (and the loaded page) instead of building a new one
+        browserView
       } else {
         // Zen empty state with fade-in transition
         EmptyStateView()
@@ -51,16 +48,48 @@ struct ContentView: View {
     }
   }
 
-  // MARK: - Portrait Layout
+  // MARK: - Browser Layout
 
-  private var portraitBrowserView: some View {
+  /// Determine if Dynamic Island is on the left based on device orientation
+  /// - landscapeLeft: device rotated left (home/USB-C on left) → island on LEFT
+  /// - landscapeRight: device rotated right (home/USB-C on right) → island on RIGHT
+  private var islandOnLeft: Bool {
+    deviceOrientation == .landscapeLeft
+  }
+
+  /// Edges the web content extends under. Portrait respects the top safe area
+  /// for sticky headers; landscape extends to the edge on the non-island side.
+  private var webViewIgnoredEdges: Edge.Set {
+    guard isLandscape else { return [.horizontal, .bottom] }
+    return islandOnLeft ? [.trailing, .bottom] : [.leading, .bottom]
+  }
+
+  /// Landscape rounds the web content on the island side; portrait is square.
+  private var webViewClipShape: UnevenRoundedRectangle {
+    let leadingRadius: CGFloat = isLandscape && islandOnLeft ? 20 : 0
+    let trailingRadius: CGFloat = isLandscape && !islandOnLeft ? 20 : 0
+    return UnevenRoundedRectangle(
+      topLeadingRadius: leadingRadius,
+      bottomLeadingRadius: leadingRadius,
+      bottomTrailingRadius: trailingRadius,
+      topTrailingRadius: trailingRadius
+    )
+  }
+
+  private var browserView: some View {
     ZStack(alignment: .bottom) {
-      // Theme color fill behind Dynamic Island
-      statusBarFill
+      // Portrait: theme color behind Dynamic Island. Landscape: black on the island side.
+      if isLandscape {
+        landscapeDynamicIslandFill(islandOnLeft: islandOnLeft)
+      } else {
+        statusBarFill
+      }
 
-      // Web content respects safe area for sticky headers
+      // Kept at a fixed position in the hierarchy; only its modifiers change
+      // with orientation, so SwiftUI never recreates it
       WebView(adBlocker: adBlocker)
-        .ignoresSafeArea(edges: [.horizontal, .bottom])
+        .clipShape(webViewClipShape)
+        .ignoresSafeArea(edges: webViewIgnoredEdges)
 
       // Floating navigation bar with loading indicator
       VStack(spacing: 0) {
@@ -76,6 +105,8 @@ struct ContentView: View {
       }
       .padding(.horizontal, 16)
       .padding(.bottom, 8)
+      // In landscape, add extra padding on the island side to center nav within safe area
+      .padding(islandOnLeft ? .leading : .trailing, isLandscape ? dynamicIslandEdgeWidth : 0)
       .offset(y: browserState.isNavBarVisible ? 0 : 100)
       .opacity(browserState.isNavBarVisible ? 1 : 0)
       .animation(.spring(response: 0.35, dampingFraction: 0.8), value: browserState.isNavBarVisible)
@@ -84,78 +115,6 @@ struct ContentView: View {
     .swipeToClose {
       browserState.close()
     }
-  }
-
-  // MARK: - Landscape Layout
-
-  /// Determine if Dynamic Island is on the left based on device orientation
-  /// - landscapeLeft: device rotated left (home/USB-C on left) → island on LEFT
-  /// - landscapeRight: device rotated right (home/USB-C on right) → island on RIGHT
-  private var islandOnLeft: Bool {
-    deviceOrientation == .landscapeLeft
-  }
-
-  private var landscapeBrowserView: some View {
-    GeometryReader { geometry in
-      let windowInsets = Self.getWindowSafeAreaInsets()
-      let leftInset = windowInsets.left
-      let rightInset = windowInsets.right
-
-      ZStack(alignment: .bottom) {
-        // Black fill behind Dynamic Island (detected side)
-        landscapeDynamicIslandFill(
-          islandOnLeft: islandOnLeft, leftInset: leftInset, rightInset: rightInset)
-
-        // Web content - extend to edge on the non-island side, rounded on island side
-        WebView(adBlocker: adBlocker)
-          .clipShape(
-            UnevenRoundedRectangle(
-              topLeadingRadius: islandOnLeft ? 20 : 0,
-              bottomLeadingRadius: islandOnLeft ? 20 : 0,
-              bottomTrailingRadius: islandOnLeft ? 0 : 20,
-              topTrailingRadius: islandOnLeft ? 0 : 20
-            )
-          )
-          .ignoresSafeArea(edges: islandOnLeft ? [.trailing, .bottom] : [.leading, .bottom])
-
-        // Floating navigation bar with loading indicator
-        VStack(spacing: 0) {
-          // Loading progress bar above nav
-          if browserState.isLoading {
-            GlassProgressBar(progress: browserState.loadingProgress)
-              .padding(.horizontal, 24)
-              .padding(.bottom, 8)
-          }
-
-          // Liquid glass navigation panel (compact for landscape)
-          NavigationBar(isVertical: false)
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
-        // Add extra padding on the island side to center nav within safe area
-        .padding(islandOnLeft ? .leading : .trailing, dynamicIslandEdgeWidth)
-        .offset(y: browserState.isNavBarVisible ? 0 : 100)
-        .opacity(browserState.isNavBarVisible ? 1 : 0)
-        .animation(
-          .spring(response: 0.35, dampingFraction: 0.8), value: browserState.isNavBarVisible)
-      }
-      // Force re-render when orientation changes
-      .id(deviceOrientation.rawValue)
-    }
-    .ignoresSafeArea(.keyboard)
-    .swipeToClose {
-      browserState.close()
-    }
-  }
-
-  /// Get window safe area insets directly from UIKit
-  private static func getWindowSafeAreaInsets() -> UIEdgeInsets {
-    guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-      let window = windowScene.windows.first
-    else {
-      return .zero
-    }
-    return window.safeAreaInsets
   }
 
   // MARK: - Status Bar Theme Fill
@@ -177,9 +136,7 @@ struct ContentView: View {
 
   /// Fills the side safe area (behind Dynamic Island in landscape) with black
   @ViewBuilder
-  private func landscapeDynamicIslandFill(
-    islandOnLeft: Bool, leftInset: CGFloat, rightInset: CGFloat
-  ) -> some View {
+  private func landscapeDynamicIslandFill(islandOnLeft: Bool) -> some View {
     if islandOnLeft {
       // Dynamic Island is on the left side
       HStack(spacing: 0) {

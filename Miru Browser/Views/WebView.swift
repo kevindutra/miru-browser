@@ -10,6 +10,7 @@ import WebKit
 
 struct WebView: UIViewRepresentable {
   @Environment(BrowserState.self) private var browserState
+  @Environment(AppSettings.self) private var settings
   let adBlocker: AdBlocker
 
   func makeCoordinator() -> Coordinator {
@@ -18,7 +19,14 @@ struct WebView: UIViewRepresentable {
 
   func makeUIView(context: Context) -> WKWebView {
     let configuration = WKWebViewConfiguration()
-    configuration.websiteDataStore = .nonPersistent()
+    // Ephemeral by default; with "Stay Signed In" on, cookies and site data
+    // persist so logins survive between pages and launches
+    configuration.websiteDataStore = settings.staySignedIn ? .default() : .nonPersistent()
+
+    // Identify as Safari. Without the Safari token some sites (x.com) treat
+    // Miru as an in-app webview and redirect to an x-safari-https:// link
+    // that WKWebView can't open.
+    configuration.applicationNameForUserAgent = Self.safariApplicationName
 
     // Prevent video autoplay and fullscreen
     configuration.mediaTypesRequiringUserActionForPlayback = .all
@@ -59,6 +67,12 @@ struct WebView: UIViewRepresentable {
     }
 
     return webView
+  }
+
+  /// The part of Mobile Safari's user agent that follows "(KHTML, like Gecko)".
+  private static var safariApplicationName: String {
+    let os = ProcessInfo.processInfo.operatingSystemVersion
+    return "Version/\(os.majorVersion).\(os.minorVersion) Mobile/15E148 Safari/604.1"
   }
 
   func updateUIView(_ webView: WKWebView, context: Context) {
@@ -171,8 +185,11 @@ struct WebView: UIViewRepresentable {
       }
 
       urlObservation = webView.observe(\.url, options: [.new]) { [weak self] webView, _ in
+        // url goes nil when the first navigation fails; keep the page open
+        // rather than dropping back to the home screen (close() clears it)
+        guard let url = webView.url else { return }
         DispatchQueue.main.async {
-          self?.browserState.currentURL = webView.url
+          self?.browserState.currentURL = url
         }
       }
 
@@ -204,7 +221,21 @@ struct WebView: UIViewRepresentable {
       _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
       decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
     ) {
-      // Allow all navigation since this is a view-only browser
+      // "Open in Safari" links (x-safari-https://…) are meant to escape in-app
+      // webviews. Miru is the browser, so load the real URL in place.
+      if let url = navigationAction.request.url,
+        let scheme = url.scheme?.lowercased(), scheme.hasPrefix("x-safari-"),
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+      {
+        components.scheme = String(scheme.dropFirst("x-safari-".count))
+        if let target = components.url, target.scheme == "https" || target.scheme == "http" {
+          decisionHandler(.cancel)
+          webView.load(URLRequest(url: target))
+          return
+        }
+      }
+
+      // Allow all other navigation since this is a view-only browser
       decisionHandler(.allow)
     }
 
