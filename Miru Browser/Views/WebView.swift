@@ -32,8 +32,9 @@ struct WebView: UIViewRepresentable {
     configuration.mediaTypesRequiringUserActionForPlayback = .all
     configuration.allowsInlineMediaPlayback = true
 
-    let webView = WKWebView(frame: .zero, configuration: configuration)
+    let webView = MiruWebView(frame: .zero, configuration: configuration)
     webView.navigationDelegate = context.coordinator
+    webView.uiDelegate = context.coordinator
     webView.allowsBackForwardNavigationGestures = true
 
     // Store reference in browser state for navigation actions
@@ -75,6 +76,19 @@ struct WebView: UIViewRepresentable {
     return "Version/\(os.majorVersion).\(os.minorVersion) Mobile/15E148 Safari/604.1"
   }
 
+  /// The real http(s) URL behind an "Open in Safari" link (x-safari-https://…),
+  /// which sites use to escape in-app webviews. Miru is the browser, so these
+  /// load in place.
+  static func safariRedirectTarget(_ url: URL?) -> URL? {
+    guard let url, let scheme = url.scheme?.lowercased(), scheme.hasPrefix("x-safari-"),
+      var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+    else { return nil }
+    components.scheme = String(scheme.dropFirst("x-safari-".count))
+    guard let target = components.url, target.scheme == "https" || target.scheme == "http"
+    else { return nil }
+    return target
+  }
+
   func updateUIView(_ webView: WKWebView, context: Context) {
     // Only load when there's a pending external URL request (from onOpenURL, etc.)
     if let pendingURL = browserState.pendingExternalURL {
@@ -83,7 +97,7 @@ struct WebView: UIViewRepresentable {
     }
   }
 
-  class Coordinator: NSObject, WKNavigationDelegate, UIScrollViewDelegate {
+  class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
     var browserState: BrowserState
     weak var refreshControl: UIRefreshControl?
     weak var webView: WKWebView?
@@ -221,22 +235,29 @@ struct WebView: UIViewRepresentable {
       _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
       decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
     ) {
-      // "Open in Safari" links (x-safari-https://…) are meant to escape in-app
-      // webviews. Miru is the browser, so load the real URL in place.
-      if let url = navigationAction.request.url,
-        let scheme = url.scheme?.lowercased(), scheme.hasPrefix("x-safari-"),
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-      {
-        components.scheme = String(scheme.dropFirst("x-safari-".count))
-        if let target = components.url, target.scheme == "https" || target.scheme == "http" {
-          decisionHandler(.cancel)
-          webView.load(URLRequest(url: target))
-          return
-        }
+      if let target = WebView.safariRedirectTarget(navigationAction.request.url) {
+        decisionHandler(.cancel)
+        webView.load(URLRequest(url: target))
+        return
       }
 
       // Allow all other navigation since this is a view-only browser
       decisionHandler(.allow)
+    }
+
+    // MARK: - WKUIDelegate
+
+    /// target="_blank" links and window.open() open in a slide-up panel
+    func webView(
+      _ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+      for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures
+    ) -> WKWebView? {
+      // Only one panel at a time: a second new tab replaces the first
+      browserState.closeNewTab()
+      let page = NewTabPage(configuration: configuration)
+      page.onClose = { [weak browserState] in browserState?.closeNewTab() }
+      browserState.newTab = page
+      return page.webView
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

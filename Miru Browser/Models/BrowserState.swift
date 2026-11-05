@@ -28,6 +28,9 @@ final class BrowserState {
     // Flag to indicate an external URL request is pending
     var pendingExternalURL: URL?
     
+    // Page opened in a new tab (target="_blank" / window.open), shown as a panel
+    var newTab: NewTabPage?
+
     // Reference to the web view for navigation actions
     weak var webView: WKWebView?
     
@@ -49,7 +52,13 @@ final class BrowserState {
         webView?.reload()
     }
     
+    func closeNewTab() {
+        newTab?.close()
+        newTab = nil
+    }
+
     func close() {
+        closeNewTab()
         currentURL = nil
         pendingExternalURL = nil
         isLoading = false

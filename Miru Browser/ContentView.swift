@@ -115,6 +115,17 @@ struct ContentView: View {
     .swipeToClose {
       browserState.close()
     }
+    .sheet(item: newTabBinding) { page in
+      NewTabSheet(page: page) { browserState.closeNewTab() }
+    }
+  }
+
+  /// Dismissing the panel (X or swipe down) tears down its web view
+  private var newTabBinding: Binding<NewTabPage?> {
+    Binding(
+      get: { browserState.newTab },
+      set: { if $0 == nil { browserState.closeNewTab() } }
+    )
   }
 
   // MARK: - Status Bar Theme Fill
