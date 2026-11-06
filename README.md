@@ -1,7 +1,7 @@
 # Miru Browser
 
 A minimal, calm iOS browser. Miru opens links, blocks ads, and gets out of the
-way — no tabs, no accounts, no data collected.
+way — no accounts, no data collected, nothing saved unless you ask.
 
 [Download on the App Store](https://apps.apple.com/app/id6757682680) ·
 [mirubrowser.com](https://mirubrowser.com)
@@ -14,11 +14,14 @@ way — no tabs, no accounts, no data collected.
   until you pick your own site in Settings. Once it's set, it's set for good.
 - **Blocks ads.** Built-in content blocking from EasyList, refreshed in the
   background.
-- **Saves nothing.** Pages load in a non-persistent `WKWebView` data store, so
-  no history, cookies, or site data survive the session.
+- **Saves nothing by default.** Pages load in a non-persistent `WKWebView` data
+  store, so no history, cookies, or site data survive the session.
 - **Optionally stays signed in.** Turn on *Stay Signed In* in Settings to keep
   cookies and site data on the device so you stay logged in to sites. Turning
   it off erases them.
+- **New-tab links open in a panel.** Links and pop-ups that want a new window
+  slide up in a closable panel, so sign-in pop-ups can finish and close
+  themselves.
 - **Simple gestures.** Pull down to refresh; swipe in from the right edge to
   close the page.
 - SwiftUI + WKWebView, iPhone and iPad.
